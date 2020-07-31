@@ -1,2 +1,3 @@
 screen.clear()
---screen.setHTML(viewVeille)
+-- scTest.clear()
+-- screen.setHTML(viewVeille)
