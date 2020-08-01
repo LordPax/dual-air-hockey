@@ -133,8 +133,8 @@ p = {
     Player:new(nil)
 }
 
-p[1]:init("player 1", 0, 0, svgHeight / 2, 0, 0, 25)
-p[2]:init("player 2", 0, 1024, svgHeight / 2, 0, 0, 25)
+p[1]:init("player 1", 0, 100, svgHeight / 2, 0, 0, 25)
+p[2]:init("player 2", 0, 924, svgHeight / 2, 0, 0, 25)
 
 p[1]:estimateVelocite()
 p[2]:estimateVelocite()
@@ -151,28 +151,53 @@ function Ball:new(o)
 end
 
 function Ball:borderCollision(x, y, vx, vy, r)
-    local vx = ((x + r >= 0 and x - r >= 0) and (x + r <= svgWidth and x - r <= svgWidth)) and vx or vx * -1
-    local vy = ((y + r >= 0 and y - r >= 0) and (y + r <= svgHeight and y - r <= svgHeight)) and vy or vy * -1
+    local nvx = ((x + r >= 0 and x - r >= 0) and (x + r <= svgWidth and x - r <= svgWidth)) and vx or vx * -1
+    local nvy = ((y + r >= 0 and y - r >= 0) and (y + r <= svgHeight and y - r <= svgHeight)) and vy or vy * -1
     
-    self:setCoord(x + vx, y + vy)
-    self:setVelocite(vx, vy)
+    return {vx = nvx, vy = nvy}
 end
 
-function Ball:playerCollision(x, y, vx, vy, r)
+function Ball:playerCollision(x, y, vx, vy, r, player, acc)
+    acc = acc or 1
+
+    local px = player[acc]:getX()
+    local py = player[acc]:getY()
+    local pvx = player[acc]:getVx()
+    local pvy = player[acc]:getVy()
+    local pr = player[acc]:getRadius()
     
+    local dx = x - px
+    local dy = y - py
+    local dist = math.sqrt(dx * dx + dy * dy)
+    
+    local angle = math.atan(dx, dy)
+    
+    local dirX = math.cos(angle)
+    local dirY = math.sin(angle)
+    
+    local nvx = (dist > r + pr) and vx or (vx + pvx) * -dirX
+    local nvy = (dist > r + pr) and vy or (vy + pvy) * -dirY
+    
+    return (acc < #player and vx == nvx and vy == nvy) and self:playerCollision(x, y, nvx, nvy, r, player, acc + 1) or {vx = nvx, vy = nvy}
 end
 
-function Ball:update()
+function Ball:update(player)
     local x = self:getX()
     local y = self:getY()
     local vx = self:getVx()
     local vy = self:getVy()
     local r = self:getRadius()
     
-    self:borderCollision(x, y, vx, vy, r)
-    self:playerCollision(x, y, vx, vy, r)
+    local bc = self:borderCollision(x, y, vx, vy, r)
+    local pc = self:playerCollision(x, y, vx, vy, r, player)
+    
+    local nvx = (bc.vx ~= vx) and bc.vx or pc.vx
+    local nvy = (bc.vy ~= vy) and bc.vy or pc.vy
+    
+    self:setCoord(x + nvx, y + nvy)
+    self:setVelocite(nvx, nvy)
 end
 
 ball = Ball:new(nil)
 
-ball:init(svgWidth / 2, svgHeight / 2, 2, 2, 25)
+ball:init(svgWidth / 2, svgHeight / 2, 5, 0, 25)

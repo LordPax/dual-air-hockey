@@ -11,7 +11,7 @@ controllerMain = function()
 
     p[1]:estimateVelocite()
     p[2]:estimateVelocite()
-    ball:update()
+    ball:update(p)
     
     local val = {
         bx = ball:getX(),
