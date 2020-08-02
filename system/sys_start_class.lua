@@ -62,7 +62,11 @@ Player = Entity:new({
     pts = 0,
     memTime = 0,
     memX = 0,
-    memY = 0
+    memY = 0,
+    goalX = 0,
+    goalY = 0,
+    goalW = 0,
+    goalH = 0
 }) -- errite de Entity
 
 function Player:new(o)
@@ -72,13 +76,14 @@ function Player:new(o)
     return o
 end
 
-function Player:init(name, pts, x, y, vx, vy, r)
+function Player:init(name, pts, x, y, vx, vy, r, gx, gy, gw, gh)
     self:setCoord(x, y)
     self:setVelocite(vx, vy)
     self:setRadius(r)
     self:setName(name)
     self:setPts(pts)
-    self:setMemory(system.getTime(), self:getX(), self:getY(), 0)
+    self:setMemory(system.getTime(), self:getX(), self:getY())
+    self:setGoal(gx, gy, gw, gh)
 end
 
 function Player:estimateVelocite()
@@ -112,6 +117,10 @@ function Player:getMemY()
     return self.memY
 end
 
+function Player:getMemory()
+    return self.memTime, self.memX, self.memY
+end
+
 function Player:setName(name)
     self.name = name
 end
@@ -128,13 +137,41 @@ function Player:getPts()
     return self.pts
 end
 
+function Player:setGoal(x, y, w, h)
+    self.goalX = x
+    self.goalY = y
+    self.goalW = w
+    self.goalH = h
+end
+
+function Player:getGoal()
+    return self.goalX, self.goalY, self.goalW, self.goalH
+end
+
+function Player:isWin(b)
+    local gx, gy, gw, gh = self:getGoal()
+    local bx = b:getX()
+    local by = b:getY()
+    local br = b:getRadius()
+    
+    if ((bx + br >= gx or bx - br >= gx) and 
+        (bx + br <= gx + gw or bx - br <= gx + gw) and 
+        (by + br >= gy or by - br >= gy) and 
+        (by + br <= gy + gh or by - br <= gy + gh)) then
+        
+        self:setPts(self:getPts() + 1)
+        b:setCoord(svgWidth / 2, svgHeight / 2)
+        b:setVelocite(0, 0)
+    end
+end
+
 p = {
     Player:new(nil),
     Player:new(nil)
 }
 
-p[1]:init("player 1", 0, 100, svgHeight / 2, 0, 0, 25)
-p[2]:init("player 2", 0, 924, svgHeight / 2, 0, 0, 25)
+p[1]:init("player 1", 0, 100, svgHeight / 2, 0, 0, 25, 999, 231, 25, 150)
+p[2]:init("player 2", 0, 924, svgHeight / 2, 0, 0, 25, 0, 231, 25, 150)
 
 p[1]:estimateVelocite()
 p[2]:estimateVelocite()
@@ -154,7 +191,7 @@ function Ball:borderCollision(x, y, vx, vy, r)
     local nvx = ((x + r >= 0 and x - r >= 0) and (x + r <= svgWidth and x - r <= svgWidth)) and vx or vx * -1
     local nvy = ((y + r >= 0 and y - r >= 0) and (y + r <= svgHeight and y - r <= svgHeight)) and vy or vy * -1
     
-    return {vx = nvx, vy = nvy}
+    return nvx, nvy
 end
 
 function Ball:playerCollision(x, y, vx, vy, r, player, acc)
@@ -175,10 +212,11 @@ function Ball:playerCollision(x, y, vx, vy, r, player, acc)
     local dirX = math.cos(angle)
     local dirY = math.sin(angle)
     
-    local nvx = (dist > r + pr) and vx or (vx + pvx) * -dirX
-    local nvy = (dist > r + pr) and vy or (vy + pvy) * -dirY
+    local nvx = (dist > r + pr) and vx or (vx + pvx) * dirX
+    local nvy = (dist > r + pr) and vy or (vy + pvy) * dirY
     
-    return (acc < #player and vx == nvx and vy == nvy) and self:playerCollision(x, y, nvx, nvy, r, player, acc + 1) or {vx = nvx, vy = nvy}
+    return (acc < #player and vx == nvx and vy == nvy) and 
+        self:playerCollision(x, y, nvx, nvy, r, player, acc + 1) or nvx, nvy
 end
 
 function Ball:update(player)
@@ -188,16 +226,19 @@ function Ball:update(player)
     local vy = self:getVy()
     local r = self:getRadius()
     
-    local bc = self:borderCollision(x, y, vx, vy, r)
-    local pc = self:playerCollision(x, y, vx, vy, r, player)
+    local bvx, bvy = self:borderCollision(x, y, vx, vy, r)
+    local pvx, pvy = self:playerCollision(x, y, vx, vy, r, player)
     
-    local nvx = (bc.vx ~= vx) and bc.vx or pc.vx
-    local nvy = (bc.vy ~= vy) and bc.vy or pc.vy
+    local nvx = ((bvx ~= vx) and bvx or pvx) * frote
+    local nvy = ((bvy ~= vy) and bvy or pvy) * frote
     
     self:setCoord(x + nvx, y + nvy)
     self:setVelocite(nvx, nvy)
+    
+    player[1]:isWin(self)
+    player[2]:isWin(self)
 end
 
 ball = Ball:new(nil)
 
-ball:init(svgWidth / 2, svgHeight / 2, 5, 0, 25)
+ball:init(svgWidth / 2, svgHeight / 2, 0, 0, 25)

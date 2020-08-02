@@ -11,6 +11,7 @@ controllerMain = function()
 
     p[1]:estimateVelocite()
     p[2]:estimateVelocite()
+    
     ball:update(p)
     
     local val = {
@@ -30,4 +31,12 @@ end
 
 controllerTest = function()
     return string.format("p2 : vx = %.2f vy = %.2f", p[2]:getVx(), p[2]:getVy())
+end
+
+controllerScore = function(p)
+    local val = {
+        p = p:getName(),
+        score = p:getPts()
+    }
+    return render(viewScore, val)
 end

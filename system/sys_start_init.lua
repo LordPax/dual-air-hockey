@@ -4,7 +4,7 @@ bound = 1
 
 svgWidth = 1024
 svgHeight = 612
-frote = 0.75
+frote = 0.95
 
 render = function(view, tabVal)
     local rep = ''
